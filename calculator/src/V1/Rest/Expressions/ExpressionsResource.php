@@ -1,30 +1,36 @@
 <?php
+
 namespace calculator\V1\Rest\Expressions;
 
-use ZF\ApiProblem\ApiProblem;
-use ZF\Rest\AbstractResourceListener;
 use Zend\Cache\Storage;
 use Zend\Json;
+use ZF\ApiProblem\ApiProblem;
+use ZF\Rest\AbstractResourceListener;
 
 class ExpressionsResource extends AbstractResourceListener
 {
-	protected $storage;
+    protected $storage;
 
-	public function __construct(Storage\StorageInterface $storage) {
-		$this->storage = $storage;
-	}
+    public function __construct(Storage\StorageInterface $storage)
+    {
+        $this->storage = $storage;
+    }
+
     /**
      * Create a resource
      *
-     * @param  mixed $data
+     * @param mixed $data
      * @return ApiProblem|mixed
      */
     public function create($data)
     {
-	$id = hash("sha256", $data->expression);
-	$this->storage->setItem($id, $data->expression);
-	echo Json\Json::encode("Location: $id");
-print_r(get_class_methods($this));
+        $id = hash("sha256", $data->expression);
+        $this->storage->setItem($id, $data->expression);
+        var_dump(preg_split("/[-+\/*]/", $this->storage->getItem($id)));
+        var_dump(preg_split("/\d+/", $this->storage->getItem($id)));
+
+        echo Json\Json::encode("Location: $id");
+        print_r(get_class_methods($this));
     }
 
     /**
@@ -35,7 +41,7 @@ print_r(get_class_methods($this));
      */
     public function delete($id)
     {
-		return $this->storage->removeItem($id);
+        $this->storage->removeItem($id);
     }
 
     /**
@@ -46,12 +52,12 @@ print_r(get_class_methods($this));
      */
     public function deleteList($data)
     {
-		$keys = [];
+        $keys = [];
 
-		foreach ($this->storage as $key) {
-			$keys[] = $key;
-		}
-		return $this->storage->removeItems($keys);
+        foreach ($this->storage as $key) {
+            $keys[] = $key;
+        }
+        $this->storage->removeItems($keys);
     }
 
     /**
@@ -62,25 +68,23 @@ print_r(get_class_methods($this));
      */
     public function fetch($id)
     {
-		var_dump(preg_split("/[-+\/*]/", $this->storage->getItem($id)));
-		var_dump(preg_split("/\d+/", $this->storage->getItem($id)));
-
+	return new ExpressionsEntity($this->storage->getItem($id));
     }
 
     /**
      * Fetch all or a subset of resources
      *
-     * @param  array $params
+     * @param  array            $params
      * @return ApiProblem|mixed
      */
     public function fetchAll($params = [])
     {
-		$keys = [];
+        $keys = [];
 
-		foreach ($this->storage as $key) {
-			$keys[] = $key;
-		}
-		return $this->storage->getItems($keys);
+        foreach ($this->storage as $key) {
+            $keys[] = $key;
+        }
+        return new ExpressionsCollections($this->storage->getItems($keys));
     }
 
     /**
