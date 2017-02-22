@@ -13,23 +13,23 @@ class Evaluator
 
     /**
      * @param  string $op
-     * @param  float  $left
-     * @param  float  $right
-     * @return float
+     * @param  int    $left
+     * @param  int    $right
+     * @return int
      */
     public static function evaluateBinary($op, $left, $right)
     {
         switch ($op) {
             case self::ADD:
-                return (float) $left + $right;
+                return intval($left + $right);
             case self::SUB:
-                return (float) $left - $right;
+                return intval($left - $right);
             case self::MUL:
-                return (float) $left * $right;
+                return intval($left * $right);
             case self::DIV:
-                return (float) $left / $right;
+                return intval($left / $right);
             default:
-                throw new Exception("not implemented");
+                throw new Exception("operator `$op` not implemented");
         }
     }
 }

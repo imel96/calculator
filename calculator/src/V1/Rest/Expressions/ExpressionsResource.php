@@ -3,51 +3,57 @@
 namespace calculator\V1\Rest\Expressions;
 
 use Zend\Cache\Storage;
-use Zend\Json;
+use Zend\Http\Response;
 use ZF\ApiProblem\ApiProblem;
 use ZF\Rest\AbstractResourceListener;
 
 class ExpressionsResource extends AbstractResourceListener
 {
     protected $storage;
+    protected $response;
 
-    public function __construct(Storage\StorageInterface $storage)
+    public function __construct(Storage\StorageInterface $storage, Response $response)
     {
         $this->storage = $storage;
+        $this->response = $response;
     }
 
     /**
      * Create a resource
      *
-     * @param mixed $data
+     * @param  mixed            $data
      * @return ApiProblem|mixed
      */
     public function create($data)
     {
-        $id = hash("sha256", $data->expression);
-        $this->storage->setItem($id, $data->expression);
-        var_dump(preg_split("/[-+\/*]/", $this->storage->getItem($id)));
-        var_dump(preg_split("/\d+/", $this->storage->getItem($id)));
+        $id = hash("sha1", $data->expression);
+        $tokens = explode(",", $data->expression);
+        $result = Evaluator::evaluateBinary($tokens[1], $tokens[0], $tokens[2]);
+        $this->storage->setItem($id, serialize(['expression' => $data->expression, 'result' => $result]));
 
-        echo Json\Json::encode("Location: $id");
-        print_r(get_class_methods($this));
+        $this->response->getHeaders()
+            ->addHeaderLine("Location: " . $this->getEvent()->getRequest()->getUriString() . "/$id");
+
+        return $this->response->setStatusCode(Response::STATUS_CODE_201);
     }
 
     /**
      * Delete a resource
      *
-     * @param  mixed $id
+     * @param  mixed            $id
      * @return ApiProblem|mixed
      */
     public function delete($id)
     {
         $this->storage->removeItem($id);
+
+        return $this->response->setStatusCode(Response::STATUS_CODE_204);
     }
 
     /**
      * Delete a collection, or members of a collection
      *
-     * @param  mixed $data
+     * @param  mixed            $data
      * @return ApiProblem|mixed
      */
     public function deleteList($data)
@@ -58,17 +64,22 @@ class ExpressionsResource extends AbstractResourceListener
             $keys[] = $key;
         }
         $this->storage->removeItems($keys);
+        return $this->response->setStatusCode(Response::STATUS_CODE_204);
+
     }
 
     /**
      * Fetch a resource
      *
-     * @param  mixed $id
+     * @param  mixed            $id
      * @return ApiProblem|mixed
      */
     public function fetch($id)
     {
-	return new ExpressionsEntity($this->storage->getItem($id));
+        $item = unserialize($this->storage->getItem($id));
+        $item['expression'] = str_replace(",", "", $item['expression']);
+
+        return ['id' => $id] + $item;
     }
 
     /**
@@ -80,18 +91,28 @@ class ExpressionsResource extends AbstractResourceListener
     public function fetchAll($params = [])
     {
         $keys = [];
+        $items = [];
 
         foreach ($this->storage as $key) {
             $keys[] = $key;
         }
-        return new ExpressionsCollections($this->storage->getItems($keys));
+        if (empty($keys)) {
+            return $keys;
+        }
+        foreach ($this->storage->getItems($keys) as $key => $item) {
+            $item = unserialize($item);
+            $item['expression'] = str_replace(",", "", $item['expression']);
+            $items[] = ['id' => $key] + $item;
+        }
+
+        return $items;
     }
 
     /**
      * Patch (partial in-place update) a resource
      *
-     * @param  mixed $id
-     * @param  mixed $data
+     * @param  mixed            $id
+     * @param  mixed            $data
      * @return ApiProblem|mixed
      */
     public function patch($id, $data)
@@ -102,7 +123,7 @@ class ExpressionsResource extends AbstractResourceListener
     /**
      * Patch (partial in-place update) a collection or members of a collection
      *
-     * @param  mixed $data
+     * @param  mixed            $data
      * @return ApiProblem|mixed
      */
     public function patchList($data)
@@ -113,7 +134,7 @@ class ExpressionsResource extends AbstractResourceListener
     /**
      * Replace a collection or members of a collection
      *
-     * @param  mixed $data
+     * @param  mixed            $data
      * @return ApiProblem|mixed
      */
     public function replaceList($data)
@@ -124,8 +145,8 @@ class ExpressionsResource extends AbstractResourceListener
     /**
      * Update a resource
      *
-     * @param  mixed $id
-     * @param  mixed $data
+     * @param  mixed            $id
+     * @param  mixed            $data
      * @return ApiProblem|mixed
      */
     public function update($id, $data)

@@ -31,6 +31,7 @@ return [
             'collection_name' => 'expressions',
             'entity_http_methods' => [
                 0 => 'GET',
+                1 => 'DELETE',
             ],
             'collection_http_methods' => [
                 0 => 'GET',
@@ -89,7 +90,7 @@ return [
                     0 => [
                         'name' => \Zend\Validator\Regex::class,
                         'options' => [
-                            'pattern' => '/\\d+[-+\\/*]\\d+/',
+                            'pattern' => '/\\d+,[-+\\/*],\\d+/',
                         ],
                     ],
                 ],
